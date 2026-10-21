@@ -1,0 +1,5 @@
+# saved model fits (the brms script writes brms_m1.rds)
+*.rds
+.Rhistory
+.RData
+.Rproj.user/
