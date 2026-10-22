@@ -3,8 +3,8 @@
 # Worked example in R: speed vs. accuracy in lexical decision
 # Wagenmakers, Ratcliff, Gomez, & McKoon (2008), Experiment 1
 #
-# This script runs the full analysis shown in the slides, from the data to the checks before
-# reporting. Run it from top to bottom, or section by section along with the slides.
+# This script runs the full analysis shown in the slides, from the data to the fit checks
+# and the interpretation. Run it from top to bottom, or section by section along with the slides.
 #
 # Requirements: R 3.6 or later and an internet connection for the first install.
 # Running time: each model fit takes 1-2 minutes, and the whole script about 10-15 minutes
@@ -98,11 +98,56 @@ m1 <- driftd(d, sub_id = "id", response = "response", rt = "rt",
              fix_z = TRUE, fix_st0 = FALSE)
 
 
-# Step 4 · Check convergence ---------------------------------------------------------------
+# Step 3, continued · Did the fit converge? -----------------------------------------------
 fi <- m1$fit_info
 fi[1:5, c("id", "optimizer_runs", "converge", "se_status")]
 table(fi$converge)                    # 0 = converged
 table(fi$se_status)                   # "ok" = the likelihood has a proper peak
+
+
+# Step 4 · Check fit: does the model reproduce the data? ----------------------------------
+# Crosses: observed (mean of participants); large points: model;
+# bars: 95% prediction intervals for individual participants
+pred <- predict(m1, seed = 1)
+labels <- c(upper = "correct", lower = "error")
+# Left on the slide: P(correct) by word frequency and instruction
+plot(pred, type = "choice", x_var = "stimulus", color = "condition", response_labels = labels) +
+  scale_colour_manual(values = cols, name = "instruction") +
+  scale_x_discrete(labels = c(high = "high freq.", very_low = "very low freq."))
+# Right on the slide: RT quantiles for very-low-frequency words
+plot(pred, select = list(stimulus = "very_low"), color = "condition", response_labels = labels) +
+  scale_colour_manual(values = cols, name = "instruction")
+# The same for all cells
+plot(pred, color = "condition", response_labels = labels) +
+  scale_colour_manual(values = cols, name = "instruction")
+head(summary(pred), 4)
+
+
+# Step 4, continued · Can the design recover the parameters? (slow) -----------------------
+# Simulates data from each participant's Model 1 estimates (observed trial numbers),
+# refits the same model, and compares true and recovered values.
+rec <- recover_parameters(m1, seed = 1)
+rec
+plot(rec)
+
+
+# Step 4, continued · Would a simpler model fit equally well? (slow) ----------------------
+# Refit with one drift rate for both word frequencies, then compare with Model 1:
+# AIC and BIC (summed and per participant) and a likelihood-ratio test of the nested models.
+m_v0 <- driftd(d, sub_id = "id", response = "response", rt = "rt",
+               vary_a = "condition", vary_t0 = "condition",          # v not varied
+               fix_z = TRUE, fix_st0 = FALSE)
+compare_models(m_v0, m1)
+
+# The same check for boundary separation and non-decision time (two more model fits)
+m_a0 <- driftd(d, sub_id = "id", response = "response", rt = "rt",
+               vary_v = "stimulus", vary_t0 = "condition",           # a not varied
+               fix_z = TRUE, fix_st0 = FALSE)
+m_t0 <- driftd(d, sub_id = "id", response = "response", rt = "rt",
+               vary_v = "stimulus", vary_a = "condition",            # Ter not varied
+               fix_z = TRUE, fix_st0 = FALSE)
+compare_models(m_a0, m1)
+compare_models(m_t0, m1)
 
 
 # Step 5 · Interpret: the estimates, one row per participant ------------------------------
@@ -135,52 +180,11 @@ colMeans(est[c("v_high", "v_very_low", "a_accuracy", "a_speed",
                "t0_accuracy", "t0_speed", "st0")])
 
 
-# Step 5, continued · Is a condition effect reliable? -------------------------------------
-# 1. Does the average participant show it? Paired t-tests on the individual estimates
+# Step 5, continued · Are the differences reliable? ---------------------------------------
+# Paired t-tests on the individual estimates
 t.test(est$a_accuracy, est$a_speed, paired = TRUE)
 t.test(est$v_high, est$v_very_low, paired = TRUE)
 t.test(est$t0_accuracy, est$t0_speed, paired = TRUE)
-
-# 2. Does each participant need it? Refit with the parameter equal across conditions,
-#    then compare with Model 1 (slow: three more model fits)
-m_v0 <- driftd(d, sub_id = "id", response = "response", rt = "rt",
-               vary_a = "condition", vary_t0 = "condition",          # v not varied
-               fix_z = TRUE, fix_st0 = FALSE)
-m_a0 <- driftd(d, sub_id = "id", response = "response", rt = "rt",
-               vary_v = "stimulus", vary_t0 = "condition",           # a not varied
-               fix_z = TRUE, fix_st0 = FALSE)
-m_t0 <- driftd(d, sub_id = "id", response = "response", rt = "rt",
-               vary_v = "stimulus", vary_a = "condition",            # Ter not varied
-               fix_z = TRUE, fix_st0 = FALSE)
-compare_models(m_a0, m1)
-compare_models(m_v0, m1)
-compare_models(m_t0, m1)
-
-
-# Step 6 · Before reporting: does the model reproduce the data? ---------------------------
-# Crosses: observed (mean of participants); large points: model;
-# bars: 95% prediction intervals for individual participants
-pred <- predict(m1, seed = 1)
-labels <- c(upper = "correct", lower = "error")
-# Left on the slide: P(correct) by word frequency and instruction
-plot(pred, type = "choice", x_var = "stimulus", color = "condition", response_labels = labels) +
-  scale_colour_manual(values = cols, name = "instruction") +
-  scale_x_discrete(labels = c(high = "high freq.", very_low = "very low freq."))
-# Right on the slide: RT quantiles for very-low-frequency words
-plot(pred, select = list(stimulus = "very_low"), color = "condition", response_labels = labels) +
-  scale_colour_manual(values = cols, name = "instruction")
-# The same for all cells
-plot(pred, color = "condition", response_labels = labels) +
-  scale_colour_manual(values = cols, name = "instruction")
-head(summary(pred), 4)
-
-
-# Step 6, continued · Can the design recover the parameters? (slow) -----------------------
-# Simulates data from each participant's Model 1 estimates (observed trial numbers),
-# refits the same model, and compares true and recovered values.
-rec <- recover_parameters(m1, seed = 1)
-rec
-plot(rec)
 
 
 # Backup · All Model 1 estimates with standard errors -------------------------------------

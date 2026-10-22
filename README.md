@@ -8,7 +8,7 @@ The R scripts here run the worked example from the slides: speed vs. accuracy in
 
 | File | What it does | Needs |
 |---|---|---|
-| `driftd_workshop.R` | **Start here.** The full analysis from the slides: data, model specification, fitting, convergence, estimates, effects, and model checks. Fits each participant separately by maximum likelihood with [driftd](https://github.com/JStrueder/driftd). | R 3.6 or later. About 10–15 minutes on a laptop. |
+| `driftd_workshop.R` | **Start here.** The full analysis from the slides: data, model specification, fitting, model checks, estimates and effects, in the order of the slides. Fits each participant separately by maximum likelihood with [driftd](https://github.com/JStrueder/driftd). | R 3.6 or later. About 10–15 minutes on a laptop. |
 | `driftd_workshop_brms.R` | Optional. The same analysis as a hierarchical Bayesian model with [brms](https://paulbuerkner.com/brms/). | R 4.0 or later and a working Stan installation (rstan or cmdstanr). The model fit takes about 1.5 hours with 4 chains on 4 cores. |
 
 ## How to run
